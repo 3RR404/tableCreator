@@ -1,5 +1,7 @@
 # tableCreator
- Create the table onload the page
+ MySQL query-base table generator. Create the table onload the page.
+This app use PDO extension. 
+
 
 ## Use
 
