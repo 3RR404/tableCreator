@@ -384,6 +384,62 @@ class TableCreator
         }
     }
 
+    /**
+     * ## Create fulltext index
+     * @since v1.0.1
+     * @param string $index_type - default empty lowercased index type e.(fulltext||primary||unique)
+     * @param array $indexes - default empty array index name and column name
+     * @param array $indexes_names - default empty array index names this replace index name from $indexes
+     * 
+     * @return bool|string - if first index in array exists script end, or return PDO Exc. message
+     */
+    public function updateIndexes( string $index_type = '', array $indexes = [], array $indexes_names = [] )
+    {
+        $index_exists = Db::getPDO()
+            ->query("SELECT DISTINCT index_name FROM INFORMATION_SCHEMA.STATISTICS WHERE (table_schema, table_name) = ('gentleday', '$this->table') AND index_type = 'FULLTEXT'")
+            ->fetchAll();
+
+        foreach( $indexes as $key => $idx )
+        {
+            foreach( $index_exists as $index )
+            {
+                if( in_array( $idx, $index )  ) return true;
+            }
+
+            $sql = "ALTER TABLE `{$this->table}`";
+    
+            switch( $index_type )
+            {
+                case 'fulltext':
+                    if( \contains( $idx, ',' ) )
+                    {
+                        $index_name = !empty($indexes_names[$key])?$indexes_names[$key]:$idx;
+                        $sql .= " ADD FULLTEXT `$index_name` (";
+                        $idx_is_array = explode( ',', $idx );
+                        $int = 1;
+                        foreach( $idx_is_array as $_index )
+                        {
+                            $sql .= "`$_index`";
+                            if( $int < count( $idx_is_array ) ) $sql .= ", ";
+                            $int++;
+                        }
+                        $sql .= ")";
+                    } else {
+                        $index_name = !empty($indexes_names[$key])?$indexes_names[$key]:$idx;
+                        $sql .= " ADD FULLTEXT `$index_name` (`$idx`)";
+                    }
+                break;
+            }
+
+            try{
+                \Db::getPDO()->exec( $sql );
+            } catch( \PDOException $e ){
+                echo $e->getMessage();
+                exit;
+            }
+        }
+    }
+
     /** 
      * seed the created tables 
      * @param string $seeding_array_key - kluc pola z TableSeeder pluginu
