@@ -395,8 +395,11 @@ class TableCreator
      */
     public function updateIndexes( string $index_type = '', array $indexes = [], array $indexes_names = [] )
     {
+        list( , $dbnamestring ) = explode( ';', Db::getPDO()->connectionData['string'] );
+        list( ,$dbname ) = explode( '=', $dbnamestring );
+
         $index_exists = Db::getPDO()
-            ->query("SELECT DISTINCT index_name FROM INFORMATION_SCHEMA.STATISTICS WHERE (table_schema, table_name) = ('gentleday', '$this->table') AND index_type = 'FULLTEXT'")
+            ->query("SELECT DISTINCT index_name FROM INFORMATION_SCHEMA.STATISTICS WHERE (table_schema, table_name) = ('$dbname', '$this->table') AND index_type = 'FULLTEXT'")
             ->fetchAll();
 
         foreach( $indexes as $key => $idx )
