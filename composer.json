@@ -1,0 +1,22 @@
+{
+    "name": "table-creator/table-creator",
+    "description": "create and seed the SQL tables",
+    "type": "library",
+    "require": {
+        "vlucas/phpdotenv": "^5.1"
+    },
+    "license": "mit",
+    "authors": [
+        {
+            "name": "err404",
+            "email": "oknajlehcim@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "TableCreator\\Src\\": "Src/",
+            "TableCreator\\System\\": "System/"
+        }
+    }
+}

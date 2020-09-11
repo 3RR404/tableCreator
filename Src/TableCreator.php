@@ -1,11 +1,7 @@
 <?php 
-namespace App;
+namespace TableCreator\Src;
 
-require_once "TableSeeder.php";
-
-
-use App\Db;
-use App\TableSeeder;
+use TableCreator\System\DatabaseConnector as SystemDatabaseConnector;
 
 /**
  * Vytvarac SQL tabuliek
@@ -83,13 +79,13 @@ class TableCreator
     /** @var array $timestamp_dv - default values */
     public $timestamp_dv;
 
-
+    protected $dbConnection;
 
     function __construct( $table )
     {
         $this->table = $table;
 
-        Db::connect();
+        $this->dbConnection = (new SystemDatabaseConnector())->getConnection();
     }
 
     /**
@@ -227,14 +223,6 @@ class TableCreator
     }
 
     /**
-     * @param string $table set table name
-     */
-    function table( string $table = '' )
-    {
-        return $table;
-    }
-
-    /**
      * Create a query 
      */
     protected function build()
@@ -336,139 +324,33 @@ class TableCreator
     }
 
     /**
-     * this is old one |/\| from version 1.0 |/\| ** :: BACKCOMPAT :: ** 
-     * 
-     * @since v1.0
-     * @author err404
-     * 
-     * @return null
-     * 
-     * @param string $table
-     * @param string $columns
-     * @param bool $seed @default false
-     * @param string $seeding_data - as key for array from plugin TableSeeder
-     */
-    function create_table( $table, $columns, $seed = false, string $seeding_data = '' )
-    {
-        try {
-            $tableCreate = Db::getPDO()->prepare("SELECT * FROM {$table}");
-            $tableCreate->execute();
-        } catch( \PDOException $e){
-            echo "<!--\t $e \t-->";
-            $sql = "CREATE TABLE IF NOT EXISTS `$table` ( $columns ) ENGINE = InnoDB DEFAULT CHARSET = utf8_general_ci";
-            if( $e ) Db::getPDO()->exec( $sql );
-        }
-
-        if( empty( Db::get()->$table()->fetch() ) && $seed === TRUE ){
-            
-            $create = \Plugin::get('TableSeeder', false, $seeding_data );
-            $create->seed();
-
-        }
-    }
-
-    /**
      * execute query
      */
     function up()
     {
         try {
-            $tb = Db::getPDO()->prepare("SELECT * FROM {$this->table}");
-            $tb->execute();
-        } catch( \PDOException $e ){
-            if( $e->getCode() == '42S02' || $e->getCode() == '42000' )
-            {
-                $sql = "CREATE TABLE IF NOT EXISTS `$this->table` ( " . $this->build() . " ) ENGINE = InnoDB DEFAULT CHARSET = utf8 DEFAULT COLLATE utf8_general_ci";
-                Db::getPDO()->exec( $sql );
-            }
-        }
-    }
+            $sql = "CREATE TABLE IF NOT EXISTS `$this->table` ( " . $this->build() . " ) ENGINE = InnoDB DEFAULT CHARSET = utf8 DEFAULT COLLATE utf8_general_ci";
 
-    /**
-     * ## Create fulltext index
-     * @since v1.0.1
-     * @param string $index_type - default empty lowercased index type e.(fulltext||primary||unique)
-     * @param array $indexes - default empty array index name and column name
-     * @param array $indexes_names - default empty array index names this replace index name from $indexes
-     * 
-     * @return bool|string - if first index in array exists script end, or return PDO Exc. message
-     */
-    public function updateIndexes( string $index_type = '', array $indexes = [], array $indexes_names = [] )
-    {
-        list( , $dbnamestring ) = explode( ';', Db::getPDO()->connectionData['string'] );
-        list( ,$dbname ) = explode( '=', $dbnamestring );
+            $this->dbConnection->exec( $sql );
 
-        $index_exists = Db::getPDO()
-            ->query("SELECT DISTINCT index_name FROM INFORMATION_SCHEMA.STATISTICS WHERE (table_schema, table_name) = ('$dbname', '$this->table') AND index_type = 'FULLTEXT'")
-            ->fetchAll();
-
-        foreach( $indexes as $key => $idx )
+        } catch( \PDOException $e )
         {
-            foreach( $index_exists as $index )
-            {
-                if( in_array( $idx, $index )  ) return true;
-            }
-
-            $sql = "ALTER TABLE `{$this->table}`";
-    
-            switch( $index_type )
-            {
-                case 'fulltext':
-                    if( \contains( $idx, ',' ) )
-                    {
-                        $index_name = !empty($indexes_names[$key])?$indexes_names[$key]:$idx;
-                        $sql .= " ADD FULLTEXT `$index_name` (";
-                        $idx_is_array = explode( ',', $idx );
-                        $int = 1;
-                        foreach( $idx_is_array as $_index )
-                        {
-                            $sql .= "`$_index`";
-                            if( $int < count( $idx_is_array ) ) $sql .= ", ";
-                            $int++;
-                        }
-                        $sql .= ")";
-                    } else {
-                        $index_name = !empty($indexes_names[$key])?$indexes_names[$key]:$idx;
-                        $sql .= " ADD FULLTEXT `$index_name` (`$idx`)";
-                    }
-                break;
-            }
-
-            try{
-                \Db::getPDO()->exec( $sql );
-            } catch( \PDOException $e ){
-                echo $e->getMessage();
-                exit;
-            }
+            exit( $e->getMessage() );
         }
     }
 
     /** 
      * seed the created tables 
-     * @param string $seeding_array_key - kluc pola z TableSeeder pluginu
+     * @param string $seeding_values
+     * 
+     * @return void
      */
-    function seed( string $seeding_array_key )
+    function seed( string $seeding_values )
     {
-        if( empty( Db::getPDO()->query("SELECT * FROM {$this->table} WHERE 1")->fetch() ) ){
+        if( empty( $this->dbConnection->query("SELECT * FROM {$this->table} WHERE 1")->fetch() ) ){
             $create = new TableSeeder( $this->table );
-            $create->seed( $seeding_array_key );
-        }
-    }
-
-    /**
-     * Drop the table
-     * @param string $table - tabe name what'll be droped
-     */
-    function drop_the_table( string $table )
-    {
-        try {
-            $tableCreate = Db::getPDO()->prepare("DROP TABLE {$table}");
-            $tableCreate->execute();
-        } catch( \PDOException $e){
-            if( $e->getCode() == '42S02' ) return false;
-            else echo "<!--\t {$e->getCode()} \t-->";
+            $create->seed( $seeding_values );
         }
     }
 
 }
-
