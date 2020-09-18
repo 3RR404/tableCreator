@@ -1,5 +1,5 @@
 {
-    "name": "table-creator/table-creator",
+    "name": "err404/table-creator",
     "description": "create and seed the SQL tables",
     "type": "library",
     "require": {
@@ -12,6 +12,7 @@
             "email": "oknajlehcim@gmail.com"
         }
     ],
+    "version":"v1.2.0",
     "minimum-stability": "stable",
     "autoload": {
         "psr-4": {
