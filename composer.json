@@ -12,7 +12,6 @@
             "email": "oknajlehcim@gmail.com"
         }
     ],
-    "version":"v1.2.0",
     "minimum-stability": "stable",
     "autoload": {
         "psr-4": {
